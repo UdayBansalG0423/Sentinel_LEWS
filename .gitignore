@@ -1,0 +1,44 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Virtual environments
+venv/
+.venv/
+env/
+.env/
+
+# Project-specific virtualenvs
+dashboard/venv/
+dashboard/.venv/
+# model
+model/
+
+# Local database files (do not push to GitHub)
+database/
+
+# Dashboard app (ignored from repo)
+dashboard/
+
+# Distribution / packaging
+build/
+dist/
+*.egg-info/
+
+# Logs and runtime files
+*.log
+*.pid
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints/
+
+# OS / Editor files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
