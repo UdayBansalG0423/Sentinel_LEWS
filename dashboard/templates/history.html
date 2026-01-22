@@ -1,0 +1,149 @@
+{% extends "base.html" %}
+
+{% block title %}Prediction History - Sentinel-LEWS{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h2>Prediction History</h2>
+    <div class="page-actions">
+        <button class="btn btn-primary" onclick="exportHistory()">Export JSON</button>
+        <button class="btn btn-secondary" onclick="window.location.reload()">Refresh</button>
+    </div>
+</div>
+
+<!-- History Stats -->
+<div class="kpi-grid">
+    <div class="kpi-card">
+        <div class="kpi-label">Total Predictions</div>
+        <div class="kpi-value">{{ history|length }}</div>
+        <div class="kpi-trend">Last 100 records</div>
+    </div>
+    
+    <div class="kpi-card">
+        <div class="kpi-label">High Risk Predictions</div>
+        <div class="kpi-value">
+            {{ history|selectattr('probability', 'ge', 0.6)|list|length }}
+        </div>
+        <div class="kpi-trend">P ≥ 0.6</div>
+    </div>
+    
+    <div class="kpi-card">
+        <div class="kpi-label">Avg Probability</div>
+        <div class="kpi-value">
+            {% set avg_prob = (history|map(attribute='probability')|sum / history|length) if history else 0 %}
+            {{ (avg_prob * 100)|round(1) }}%
+        </div>
+        <div class="kpi-trend">Current dataset</div>
+    </div>
+    
+    <div class="kpi-card">
+        <div class="kpi-label">Last Update</div>
+        <div class="kpi-value" style="font-size: 1.2em;">
+            {% if history %}
+            {{ history[0].timestamp|timeago }}
+            {% else %}
+            N/A
+            {% endif %}
+        </div>
+        <div class="kpi-trend">Latest inference</div>
+    </div>
+</div>
+
+<!-- History Table -->
+<div class="card">
+    <div class="card-header">
+        <h3>Prediction Records</h3>
+        <div class="card-actions">
+            <select id="limit-select" onchange="changeLimit()">
+                <option value="100" selected>Last 100</option>
+                <option value="250">Last 250</option>
+                <option value="500">Last 500</option>
+                <option value="1000">Last 1000</option>
+            </select>
+        </div>
+    </div>
+    <div class="card-body no-padding">
+        <div class="table-container">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Timestamp</th>
+                        <th>Cell ID</th>
+                        <th>Probability</th>
+                        <th>Risk Class</th>
+                        <th>Slope</th>
+                        <th>Drainage</th>
+                        <th>Rainfall 24h</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for record in history %}
+                    <tr class="history-row">
+                        <td class="cell-time">
+                            {{ record.timestamp|format_datetime('%H:%M:%S') }}<br>
+                            <span class="cell-subtext">{{ record.timestamp|format_datetime('%Y-%m-%d') }}</span>
+                        </td>
+                        <td class="cell-cell-id">
+                            <strong>{{ record.cell_id }}</strong>
+                        </td>
+                        <td class="cell-probability">
+                            <div class="probability-display">
+                                <div class="probability-bar">
+                                    <div class="probability-fill {{ record.probability|risk_color }}" 
+                                         data-width="{{ (record.probability * 100)|round(0) }}"></div>
+                                </div>
+                                <span class="probability-text">{{ (record.probability * 100)|round(1) }}%</span>
+                            </div>
+                        </td>
+                        <td>
+                            <span class="risk-badge {{ record.probability|risk_color }}">
+                                {{ record.probability|risk_class }}
+                            </span>
+                        </td>
+                        <td>{{ record.slope|round(1) if record.slope else 'N/A' }}°</td>
+                        <td>{{ record.drainage|round(2) if record.drainage else 'N/A' }}</td>
+                        <td>{{ record.rainfall_24h|round(1) if record.rainfall_24h else 'N/A' }} mm</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function changeLimit() {
+        const limit = document.getElementById('limit-select').value;
+        window.location.href = `/history?limit=${limit}`;
+    }
+    
+    function exportHistory() {
+        fetch('/api/export/history', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ format: 'json' })
+        })
+        .then(res => res.json())
+        .then(data => {
+            // Create download link
+            const blob = new Blob([JSON.stringify(data.data, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `sentinel-lews-history-${new Date().toISOString().split('T')[0]}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        })
+        .catch(err => {
+            console.error('Export failed:', err);
+            alert('Export failed. Please try again.');
+        });
+    }
+</script>
+{% endblock %}

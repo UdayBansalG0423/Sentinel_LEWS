@@ -1,0 +1,264 @@
+{% extends "base.html" %}
+
+{% block title %}Alerts - Sentinel-LEWS{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h2>Alert Management</h2>
+    <div class="page-actions">
+        <button class="btn btn-primary" onclick="exportAlerts()">Export</button>
+    </div>
+</div>
+
+<!-- Filter Bar -->
+<div class="filter-bar">
+    <div class="filter-group">
+        <label>Severity</label>
+        <select id="filter-severity" onchange="applyFilters()">
+            <option value="all">All Severities</option>
+            <option value="CRITICAL">Critical</option>
+            <option value="HIGH">High</option>
+            <option value="MEDIUM">Medium</option>
+            <option value="LOW">Low</option>
+        </select>
+    </div>
+    
+    <div class="filter-group">
+        <label>Status</label>
+        <select id="filter-status" onchange="applyFilters()">
+            <option value="all">All Status</option>
+            <option value="pending">Pending</option>
+            <option value="acknowledged">Acknowledged</option>
+            <option value="sent">SMS Sent</option>
+        </select>
+    </div>
+    
+    <div class="filter-group">
+        <label>Time Range</label>
+        <select id="filter-time">
+            <option value="24h">Last 24 Hours</option>
+            <option value="48h">Last 48 Hours</option>
+            <option value="7d">Last 7 Days</option>
+            <option value="all">All Time</option>
+        </select>
+    </div>
+    
+    <button class="btn btn-secondary" onclick="resetFilters()">Reset</button>
+</div>
+
+<!-- Alerts Table -->
+<div class="card">
+    <div class="card-body no-padding">
+        <div class="table-container">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Time</th>
+                        <th>Severity</th>
+                        <th>Location</th>
+                        <th>Probability</th>
+                        <th>Rainfall 24h</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="alerts-table-body">
+                    {% for alert in alerts %}
+                    <tr class="alert-row severity-{{ alert.severity|lower }}" data-alert-id="{{ alert.id }}">
+                        <td class="cell-time">{{ alert.sent_time|format_datetime('%H:%M:%S') }}<br>
+                            <span class="cell-subtext">{{ alert.sent_time|format_datetime('%Y-%m-%d') }}</span>
+                        </td>
+                        <td>
+                            <span class="severity-badge severity-{{ alert.severity|lower }}">{{ alert.severity }}</span>
+                        </td>
+                        <td class="cell-location">
+                            <strong>{{ alert.location or alert.cell_id }}</strong><br>
+                            <span class="cell-subtext">{{ alert.cell_id }}</span>
+                        </td>
+                        <td class="cell-probability">
+                            <span class="probability-value {{ alert.probability|risk_color }}">
+                                {{ (alert.probability * 100)|round(1) if alert.probability else 'N/A' }}%
+                            </span>
+                        </td>
+                        <td>{{ alert.rainfall_24h|round(1) if alert.rainfall_24h else 'N/A' }} mm</td>
+                        <td>
+                            <span class="status-badge status-{{ alert.status }}">{{ alert.status|upper }}</span>
+                        </td>
+                        <td class="cell-actions">
+                            <button class="btn-icon" title="View Details" data-action="view" data-alert-id="{{ alert.id }}">👁</button>
+                            {% if alert.status == 'pending' %}
+                            <button class="btn-icon" title="Acknowledge" data-action="acknowledge" data-alert-id="{{ alert.id }}">✓</button>
+                            <button class="btn-icon" title="Send SMS" data-action="sms" data-alert-id="{{ alert.id }}">📱</button>
+                            {% endif %}
+                            <button class="btn-icon" title="View on Map" data-action="map" data-alert-id="{{ alert.id }}">📍</button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Alert Details Drawer (Initially Hidden) -->
+<div class="drawer" id="alert-details-drawer">
+    <div class="drawer-overlay" onclick="closeDrawer()"></div>
+    <div class="drawer-content">
+        <div class="drawer-header">
+            <h3>Alert Details</h3>
+            <button class="drawer-close" onclick="closeDrawer()">×</button>
+        </div>
+        
+        <div class="drawer-body" id="alert-details-body">
+            <!-- Will be populated dynamically -->
+            <div class="detail-section">
+                <h4>Alert Information</h4>
+                <div class="detail-row">
+                    <span class="detail-label">Location:</span>
+                    <span class="detail-value" id="detail-location">--</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Cell ID:</span>
+                    <span class="detail-value" id="detail-cell-id">--</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Severity:</span>
+                    <span class="detail-value" id="detail-severity">--</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Probability:</span>
+                    <span class="detail-value" id="detail-probability">--</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Time:</span>
+                    <span class="detail-value" id="detail-time">--</span>
+                </div>
+            </div>
+            
+            <div class="detail-section">
+                <h4>Environmental Factors</h4>
+                <div class="detail-row">
+                    <span class="detail-label">Rainfall (24h):</span>
+                    <span class="detail-value" id="detail-rainfall">--</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Slope:</span>
+                    <span class="detail-value" id="detail-slope">--</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Drainage:</span>
+                    <span class="detail-value" id="detail-drainage">--</span>
+                </div>
+            </div>
+            
+            <div class="detail-section">
+                <h4>Risk Explanation</h4>
+                <p id="detail-explanation" class="detail-text">
+                    High landslide probability detected based on recent rainfall accumulation,
+                    terrain slope, and soil saturation levels. Immediate attention required.
+                </p>
+            </div>
+            
+            <div class="detail-section">
+                <h4>SMS Preview</h4>
+                <div class="sms-preview" id="detail-sms-preview">
+                    SENTINEL-LEWS ALERT: Landslide risk CRITICAL at Ward 12, Sector B. 
+                    Evacuate immediately. Risk: 91%. Contact: 1800-XXX-XXXX
+                </div>
+                <div class="sms-char-count">
+                    <span id="sms-char-count">145</span> / 160 characters
+                </div>
+            </div>
+            
+            <div class="detail-section">
+                <button class="btn btn-primary btn-block" onclick="sendSMSFromDrawer()">
+                    📱 Send SMS Alert
+                </button>
+                <button class="btn btn-secondary btn-block" onclick="acknowledgeAlertFromDrawer()">
+                    ✓ Acknowledge Alert
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    let currentAlertId = null;
+    
+    function applyFilters() {
+        const severity = document.getElementById('filter-severity').value;
+        const status = document.getElementById('filter-status').value;
+        
+        const params = new URLSearchParams();
+        if (severity !== 'all') params.append('severity', severity);
+        if (status !== 'all') params.append('status', status);
+        
+        window.location.href = `/alerts?${params.toString()}`;
+    }
+    
+    function resetFilters() {
+        window.location.href = '/alerts';
+    }
+    
+    function viewAlertDetails(alertId) {
+        currentAlertId = alertId;
+        
+        // Find alert data from table row
+        const row = document.querySelector(`tr[data-alert-id="${alertId}"]`);
+        if (!row) return;
+        
+        // Extract data from row
+        const cells = row.querySelectorAll('td');
+        const location = cells[2].querySelector('strong').textContent;
+        const cellId = cells[2].querySelector('.cell-subtext').textContent;
+        const severity = cells[1].querySelector('.severity-badge').textContent;
+        const probability = cells[3].querySelector('.probability-value').textContent;
+        const time = cells[0].textContent.trim();
+        const rainfall = cells[4].textContent;
+        
+        // Populate drawer
+        document.getElementById('detail-location').textContent = location;
+        document.getElementById('detail-cell-id').textContent = cellId;
+        document.getElementById('detail-severity').innerHTML = 
+            `<span class="severity-badge severity-${severity.toLowerCase()}">${severity}</span>`;
+        document.getElementById('detail-probability').textContent = probability;
+        document.getElementById('detail-time').textContent = time;
+        document.getElementById('detail-rainfall').textContent = rainfall;
+        document.getElementById('detail-slope').textContent = '35.2°';
+        document.getElementById('detail-drainage').textContent = '0.72';
+        
+        // Update SMS preview
+        const message = `SENTINEL-LEWS ALERT: Landslide risk ${severity} at ${location}. Risk: ${probability}. Contact: 1800-XXX-XXXX`;
+        document.getElementById('detail-sms-preview').textContent = message;
+        document.getElementById('sms-char-count').textContent = message.length;
+        
+        // Show drawer
+        document.getElementById('alert-details-drawer').classList.add('active');
+    }
+    
+    function closeDrawer() {
+        document.getElementById('alert-details-drawer').classList.remove('active');
+        currentAlertId = null;
+    }
+    
+    function acknowledgeAlertFromDrawer() {
+        if (currentAlertId) {
+            acknowledgeAlert(currentAlertId);
+        }
+    }
+    
+    function sendSMSFromDrawer() {
+        if (currentAlertId) {
+            sendSMS(currentAlertId);
+        }
+    }
+    
+    function exportAlerts() {
+        // Trigger export
+        alert('Exporting alerts to JSON...');
+        window.location.href = '/api/export/alerts';
+    }
+</script>
+{% endblock %}

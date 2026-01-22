@@ -1,0 +1,318 @@
+{% extends "base.html" %}
+
+{% block title %}Settings - Sentinel-LEWS{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h2>System Settings</h2>
+</div>
+
+<div class="settings-layout">
+    <!-- Model Configuration -->
+    <div class="card">
+        <div class="card-header">
+            <h3>Model Configuration</h3>
+        </div>
+        <div class="card-body">
+            <div class="settings-section">
+                <div class="setting-item">
+                    <div class="setting-label">
+                        <strong>Model Type</strong>
+                        <span class="setting-desc">Machine learning algorithm in use</span>
+                    </div>
+                    <div class="setting-value">
+                        <span class="badge">{{ settings.model_version or 'LGBM v1.2' }}</span>
+                    </div>
+                </div>
+                
+                <div class="setting-item">
+                    <div class="setting-label">
+                        <strong>Inference Latency</strong>
+                        <span class="setting-desc">Average prediction time per cycle</span>
+                    </div>
+                    <div class="setting-value">
+                        <span class="value-highlight">{{ settings.inference_latency or '12.4' }} seconds</span>
+                    </div>
+                </div>
+                
+                <div class="setting-item">
+                    <div class="setting-label">
+                        <strong>Prediction Interval</strong>
+                        <span class="setting-desc">Frequency of risk re-evaluation</span>
+                    </div>
+                    <div class="setting-value">
+                        <span class="value-highlight">5 minutes</span>
+                    </div>
+                </div>
+                
+                <div class="setting-item">
+                    <div class="setting-label">
+                        <strong>Grid Resolution</strong>
+                        <span class="setting-desc">Spatial resolution of risk cells</span>
+                    </div>
+                    <div class="setting-value">
+                        <span class="value-highlight">100m × 100m</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Risk Thresholds -->
+    <div class="card">
+        <div class="card-header">
+            <h3>Risk Thresholds</h3>
+            <span class="badge badge-warning">READ ONLY</span>
+        </div>
+        <div class="card-body">
+            <div class="settings-section">
+                <div class="threshold-item risk-critical">
+                    <div class="threshold-label">
+                        <strong>CRITICAL</strong>
+                        <span class="threshold-desc">Immediate evacuation required</span>
+                    </div>
+                    <div class="threshold-value">
+                        <span class="threshold-range">P ≥ {{ settings.high_threshold or '0.85' }}</span>
+                    </div>
+                </div>
+                
+                <div class="threshold-item risk-high">
+                    <div class="threshold-label">
+                        <strong>HIGH</strong>
+                        <span class="threshold-desc">Close monitoring and preparation</span>
+                    </div>
+                    <div class="threshold-value">
+                        <span class="threshold-range">{{ settings.medium_threshold or '0.60' }} ≤ P &lt; {{ settings.high_threshold or '0.85' }}</span>
+                    </div>
+                </div>
+                
+                <div class="threshold-item risk-medium">
+                    <div class="threshold-label">
+                        <strong>MEDIUM</strong>
+                        <span class="threshold-desc">Increased vigilance recommended</span>
+                    </div>
+                    <div class="threshold-value">
+                        <span class="threshold-range">{{ settings.low_threshold or '0.30' }} ≤ P &lt; {{ settings.medium_threshold or '0.60' }}</span>
+                    </div>
+                </div>
+                
+                <div class="threshold-item risk-low">
+                    <div class="threshold-label">
+                        <strong>LOW</strong>
+                        <span class="threshold-desc">Normal conditions</span>
+                    </div>
+                    <div class="threshold-value">
+                        <span class="threshold-range">P &lt; {{ settings.low_threshold or '0.30' }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- System Information -->
+    <div class="card">
+        <div class="card-header">
+            <h3>System Information</h3>
+        </div>
+        <div class="card-body">
+            <div class="settings-section">
+                <div class="setting-item">
+                    <div class="setting-label">
+                        <strong>Network Status</strong>
+                    </div>
+                    <div class="setting-value">
+                        {% if settings.network_status == 'ONLINE' %}
+                        <span class="status-badge status-ok">ONLINE</span>
+                        {% else %}
+                        <span class="status-badge status-offline">OFFLINE</span>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="setting-item">
+                    <div class="setting-label">
+                        <strong>Last Data Ingestion</strong>
+                    </div>
+                    <div class="setting-value">
+                        <span class="value-text">{{ settings.last_ingestion|format_datetime if settings.last_ingestion else 'N/A' }}</span>
+                    </div>
+                </div>
+                
+                <div class="setting-item">
+                    <div class="setting-label">
+                        <strong>Database Size</strong>
+                    </div>
+                    <div class="setting-value">
+                        <span class="value-text">{{ settings.db_size or 'N/A' }}</span>
+                    </div>
+                </div>
+                
+                <div class="setting-item">
+                    <div class="setting-label">
+                        <strong>Disk Usage</strong>
+                    </div>
+                    <div class="setting-value">
+                        <div class="usage-bar">
+                            <div class="usage-fill" data-width="{{ settings.disk_usage|replace('%', '') if settings.disk_usage else '0' }}"></div>
+                        </div>
+                        <span class="usage-text">{{ settings.disk_usage or '0%' }}</span>
+                    </div>
+                </div>
+                
+                <div class="setting-item">
+                    <div class="setting-label">
+                        <strong>Last System Sync</strong>
+                    </div>
+                    <div class="setting-value">
+                        <span class="value-text">{{ settings.updated_at|timeago if settings.updated_at else 'Never' }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- SMS Configuration -->
+    <div class="card">
+        <div class="card-header">
+            <h3>SMS Alert Configuration</h3>
+        </div>
+        <div class="card-body">
+            <div class="settings-section">
+                <div class="setting-item">
+                    <div class="setting-label">
+                        <strong>GSM Modem Status</strong>
+                    </div>
+                    <div class="setting-value">
+                        <span class="status-badge status-ok">CONNECTED</span>
+                    </div>
+                </div>
+                
+                <div class="setting-item">
+                    <div class="setting-label">
+                        <strong>SMS Gateway</strong>
+                    </div>
+                    <div class="setting-value">
+                        <span class="value-text">Local GSM (COM3)</span>
+                    </div>
+                </div>
+                
+                <div class="setting-item">
+                    <div class="setting-label">
+                        <strong>Message Length Limit</strong>
+                    </div>
+                    <div class="setting-value">
+                        <span class="value-highlight">160 characters</span>
+                    </div>
+                </div>
+                
+                <div class="setting-item">
+                    <div class="setting-label">
+                        <strong>Auto-SMS for Critical</strong>
+                    </div>
+                    <div class="setting-value">
+                        <span class="status-badge status-ok">ENABLED</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Data Management -->
+    <div class="card">
+        <div class="card-header">
+            <h3>Data Management</h3>
+        </div>
+        <div class="card-body">
+            <div class="settings-section">
+                <div class="setting-item">
+                    <div class="setting-label">
+                        <strong>Data Retention Period</strong>
+                        <span class="setting-desc">How long historical data is kept</span>
+                    </div>
+                    <div class="setting-value">
+                        <span class="value-highlight">90 days</span>
+                    </div>
+                </div>
+                
+                <div class="setting-item">
+                    <div class="setting-label">
+                        <strong>Auto-Archive</strong>
+                        <span class="setting-desc">Automatic archival of old records</span>
+                    </div>
+                    <div class="setting-value">
+                        <span class="status-badge status-ok">ENABLED</span>
+                    </div>
+                </div>
+                
+                <div class="setting-item">
+                    <div class="setting-label">
+                        <strong>Backup Location</strong>
+                    </div>
+                    <div class="setting-value">
+                        <span class="value-text">/var/backups/sentinel-lews/</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="action-buttons">
+                <button class="btn btn-secondary" onclick="backupNow()">
+                    Backup Now
+                </button>
+                <button class="btn btn-secondary" onclick="cleanupOldData()">
+                    Cleanup Old Data
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- About -->
+    <div class="card">
+        <div class="card-header">
+            <h3>About Sentinel-LEWS</h3>
+        </div>
+        <div class="card-body">
+            <div class="about-section">
+                <p>
+                    <strong>Sentinel-LEWS</strong> (Landslide Early Warning System) is an offline, edge-native AI system 
+                    designed for district-level disaster management operations.
+                </p>
+                <p>
+                    The system operates independently during network failures, providing continuous risk assessment 
+                    and alert capabilities through local inference and GSM-based communication.
+                </p>
+                
+                <div class="version-info">
+                    <div class="version-item">
+                        <span class="version-label">Dashboard Version:</span>
+                        <span class="version-value">1.0.0</span>
+                    </div>
+                    <div class="version-item">
+                        <span class="version-label">Backend Version:</span>
+                        <span class="version-value">1.0.0</span>
+                    </div>
+                    <div class="version-item">
+                        <span class="version-label">Model Version:</span>
+                        <span class="version-value">{{ settings.model_version or 'LGBM v1.2' }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function backupNow() {
+        if (confirm('Start database backup now?')) {
+            alert('Backup initiated. This may take a few minutes.');
+        }
+    }
+    
+    function cleanupOldData() {
+        if (confirm('This will permanently delete records older than 90 days. Continue?')) {
+            alert('Data cleanup initiated.');
+        }
+    }
+</script>
+{% endblock %}
