@@ -1,0 +1,342 @@
+{% extends "base.html" %}
+
+{% block title %}Overview - Sentinel-LEWS{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h2>System Overview</h2>
+    <div class="page-actions">
+        <button class="btn btn-secondary" onclick="refreshData()">
+            <span>↻</span> Refresh
+        </button>
+    </div>
+</div>
+
+<!-- KPI Cards Row -->
+<div class="kpi-grid">
+    <div class="kpi-card">
+        <div class="kpi-label">High-Risk Cells</div>
+        <div class="kpi-value" id="kpi-high-risk">--</div>
+        <div class="kpi-trend">Last 10 minutes</div>
+    </div>
+    
+    <div class="kpi-card">
+        <div class="kpi-label">Active Alerts</div>
+        <div class="kpi-value risk-critical" id="kpi-active-alerts">--</div>
+        <div class="kpi-trend">Pending action</div>
+    </div>
+    
+    <div class="kpi-card">
+        <div class="kpi-label">Sensors Online</div>
+        <div class="kpi-value" id="kpi-sensors-online">--%</div>
+        <div class="kpi-trend">Network health</div>
+    </div>
+    
+    <div class="kpi-card">
+        <div class="kpi-label">Rainfall 24h Avg</div>
+        <div class="kpi-value" id="kpi-rainfall">-- mm</div>
+        <div class="kpi-trend">District average</div>
+    </div>
+</div>
+
+<!-- Main Content: Map + Alert Feed -->
+<div class="grid-layout">
+    <div class="grid-col-8">
+        <!-- Risk Map Section -->
+        <div class="card">
+            <div class="card-header">
+                <h3>Risk Map</h3>
+                <div class="map-controls">
+                    <label class="toggle-switch">
+                        <input type="checkbox" checked id="layer-risk">
+                        <span>Risk Heatmap</span>
+                    </label>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="layer-slope">
+                        <span>Slope</span>
+                    </label>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="layer-drainage">
+                        <span>Drainage</span>
+                    </label>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="layer-rainfall">
+                        <span>Rainfall 24h</span>
+                    </label>
+                    <label class="toggle-switch">
+                        <input type="checkbox" checked id="layer-sensors">
+                        <span>Sensors</span>
+                    </label>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="map-container" id="risk-map">
+                    <!-- Map will be rendered here -->
+                    <div class="map-placeholder">
+                        <div class="map-grid">
+                            <div class="map-cell risk-low"></div>
+                            <div class="map-cell risk-low"></div>
+                            <div class="map-cell risk-medium"></div>
+                            <div class="map-cell risk-low"></div>
+                            <div class="map-cell risk-low"></div>
+                            <div class="map-cell risk-medium"></div>
+                            <div class="map-cell risk-high"></div>
+                            <div class="map-cell risk-medium"></div>
+                            <div class="map-cell risk-low"></div>
+                            <div class="map-cell risk-medium"></div>
+                            <div class="map-cell risk-high"></div>
+                            <div class="map-cell risk-critical"></div>
+                            <div class="map-cell risk-high"></div>
+                            <div class="map-cell risk-medium"></div>
+                            <div class="map-cell risk-low"></div>
+                            <div class="map-cell risk-medium"></div>
+                        </div>
+                        <div class="map-overlay-text">
+                            <strong>District Map View</strong><br>
+                            <span style="font-size: 0.85em; opacity: 0.8;">100m × 100m resolution • Offline tiles active</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Map Legend -->
+                <div class="map-legend">
+                    <div class="legend-item">
+                        <span class="legend-color risk-low"></span>
+                        <span class="legend-label">LOW (&lt; 0.3)</span>
+                    </div>
+                    <div class="legend-item">
+                        <span class="legend-color risk-medium"></span>
+                        <span class="legend-label">MEDIUM (0.3–0.6)</span>
+                    </div>
+                    <div class="legend-item">
+                        <span class="legend-color risk-high"></span>
+                        <span class="legend-label">HIGH (0.6–0.85)</span>
+                    </div>
+                    <div class="legend-item">
+                        <span class="legend-color risk-critical"></span>
+                        <span class="legend-label">CRITICAL (&gt; 0.85)</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Charts Row -->
+        <div class="charts-row">
+            <div class="card">
+                <div class="card-header">
+                    <h3>Rainfall Trend (48h)</h3>
+                </div>
+                <div class="card-body">
+                    <div class="chart-placeholder" id="rainfall-chart">
+                        <svg width="100%" height="200" viewBox="0 0 600 200">
+                            <polyline points="0,150 50,140 100,120 150,130 200,100 250,90 300,85 350,95 400,110 450,100 500,80 550,70 600,75" 
+                                      fill="none" stroke="#3b82f6" stroke-width="2"/>
+                            <text x="10" y="20" fill="#64748b" font-size="12">Rainfall (mm/h)</text>
+                            <line x1="0" y1="190" x2="600" y2="190" stroke="#e2e8f0" stroke-width="1"/>
+                            <text x="10" y="195" fill="#94a3b8" font-size="10">48h ago</text>
+                            <text x="550" y="195" fill="#94a3b8" font-size="10">Now</text>
+                        </svg>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-header">
+                    <h3>Risk Distribution</h3>
+                </div>
+                <div class="card-body">
+                    <div class="chart-placeholder" id="risk-distribution-chart">
+                        <div class="bar-chart">
+                            <div class="bar-item">
+                                <div class="bar-label">LOW</div>
+                                <div class="bar-fill risk-low" style="width: 65%">
+                                    <span class="bar-value">125</span>
+                                </div>
+                            </div>
+                            <div class="bar-item">
+                                <div class="bar-label">MEDIUM</div>
+                                <div class="bar-fill risk-medium" style="width: 22%">
+                                    <span class="bar-value">42</span>
+                                </div>
+                            </div>
+                            <div class="bar-item">
+                                <div class="bar-label">HIGH</div>
+                                <div class="bar-fill risk-high" style="width: 10%">
+                                    <span class="bar-value">18</span>
+                                </div>
+                            </div>
+                            <div class="bar-item">
+                                <div class="bar-label">CRITICAL</div>
+                                <div class="bar-fill risk-critical" style="width: 3%">
+                                    <span class="bar-value">5</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="grid-col-4">
+        <!-- Live Alert Feed -->
+        <div class="card alert-feed-card">
+            <div class="card-header">
+                <h3>Live Alert Feed</h3>
+                <span class="badge badge-pulse">LIVE</span>
+            </div>
+            <div class="card-body">
+                <div class="alert-feed" id="alert-feed">
+                    <!-- Alerts will be populated by JS -->
+                    <div class="alert-feed-item severity-critical">
+                        <div class="alert-severity">
+                            <span class="severity-badge severity-critical">CRITICAL</span>
+                        </div>
+                        <div class="alert-content">
+                            <div class="alert-location">Ward 12, Sector B</div>
+                            <div class="alert-message">Landslide risk CRITICAL. Evacuate immediately.</div>
+                            <div class="alert-meta">
+                                <span class="alert-time">15m ago</span>
+                                <span class="alert-prob">P: 0.91</span>
+                            </div>
+                        </div>
+                        <div class="alert-actions">
+                            <button class="btn-icon" title="Acknowledge" data-action="acknowledge" data-alert-id="1">✓</button>
+                            <button class="btn-icon" title="Send SMS" data-action="sms" data-alert-id="1">📱</button>
+                            <button class="btn-icon" title="View on map" data-action="map" data-alert-id="1">📍</button>
+                        </div>
+                    </div>
+                    
+                    <div class="alert-feed-item severity-high">
+                        <div class="alert-severity">
+                            <span class="severity-badge severity-high">HIGH</span>
+                        </div>
+                        <div class="alert-content">
+                            <div class="alert-location">Village Rampur</div>
+                            <div class="alert-message">Landslide risk HIGH. Monitor closely.</div>
+                            <div class="alert-meta">
+                                <span class="alert-time">1h ago</span>
+                                <span class="alert-prob">P: 0.78</span>
+                            </div>
+                        </div>
+                        <div class="alert-actions">
+                            <button class="btn-icon" title="Acknowledge" data-action="acknowledge" data-alert-id="2">✓</button>
+                            <button class="btn-icon" title="Send SMS" data-action="sms" data-alert-id="2">📱</button>
+                            <button class="btn-icon" title="View on map" data-action="map" data-alert-id="2">📍</button>
+                        </div>
+                    </div>
+                    
+                    <div class="alert-feed-item severity-medium">
+                        <div class="alert-severity">
+                            <span class="severity-badge severity-medium">MEDIUM</span>
+                        </div>
+                        <div class="alert-content">
+                            <div class="alert-location">Hillside Colony</div>
+                            <div class="alert-message">Landslide risk MEDIUM. Stay alert.</div>
+                            <div class="alert-meta">
+                                <span class="alert-time">3h ago</span>
+                                <span class="alert-prob">P: 0.52</span>
+                            </div>
+                        </div>
+                        <div class="alert-actions">
+                            <button class="btn-icon" title="Acknowledge" data-action="acknowledge" data-alert-id="3">✓</button>
+                            <button class="btn-icon" title="Send SMS" data-action="sms" data-alert-id="3">📱</button>
+                            <button class="btn-icon" title="View on map" data-action="map" data-alert-id="3">📍</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Sensor Health Summary -->
+        <div class="card">
+            <div class="card-header">
+                <h3>Sensor Health</h3>
+            </div>
+            <div class="card-body">
+                <div class="sensor-summary">
+                    <div class="sensor-stat">
+                        <div class="sensor-stat-value status-ok">12</div>
+                        <div class="sensor-stat-label">Online</div>
+                    </div>
+                    <div class="sensor-stat">
+                        <div class="sensor-stat-value status-warning">2</div>
+                        <div class="sensor-stat-label">Drift</div>
+                    </div>
+                    <div class="sensor-stat">
+                        <div class="sensor-stat-value status-error">1</div>
+                        <div class="sensor-stat-label">Offline</div>
+                    </div>
+                </div>
+                <a href="{{ url_for('sensors') }}" class="btn btn-block btn-secondary">View All Sensors</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Load KPIs on page load
+    function loadKPIs() {
+        fetch('/api/summary')
+            .then(res => res.json())
+            .then(data => {
+                document.getElementById('kpi-high-risk').textContent = data.high_risk_cells;
+                document.getElementById('kpi-active-alerts').textContent = data.active_alerts;
+                document.getElementById('kpi-sensors-online').textContent = data.sensors_online_pct + '%';
+                document.getElementById('kpi-rainfall').textContent = data.avg_rainfall_24h + ' mm';
+            })
+            .catch(err => console.error('Failed to load KPIs:', err));
+    }
+    
+    // Load recent alerts
+    function loadAlerts() {
+        fetch('/api/alerts/recent?limit=10')
+            .then(res => res.json())
+            .then(alerts => {
+                const feed = document.getElementById('alert-feed');
+                if (alerts.length === 0) {
+                    feed.innerHTML = '<div class="no-data">No recent alerts</div>';
+                    return;
+                }
+                
+                feed.innerHTML = alerts.map(alert => `
+                    <div class="alert-feed-item severity-${alert.severity.toLowerCase()}">
+                        <div class="alert-severity">
+                            <span class="severity-badge severity-${alert.severity.toLowerCase()}">${alert.severity}</span>
+                        </div>
+                        <div class="alert-content">
+                            <div class="alert-location">${alert.location || alert.cell_id}</div>
+                            <div class="alert-message">${alert.message}</div>
+                            <div class="alert-meta">
+                                <span class="alert-time">${timeAgo(alert.sent_time)}</span>
+                                <span class="alert-prob">P: ${alert.probability?.toFixed(2) || 'N/A'}</span>
+                            </div>
+                        </div>
+                        <div class="alert-actions">
+                            <button class="btn-icon" title="Acknowledge" data-action="acknowledge" data-alert-id="${alert.id}">✓</button>
+                            <button class="btn-icon" title="Send SMS" data-action="sms" data-alert-id="${alert.id}">📱</button>
+                            <button class="btn-icon" title="View on map" data-action="map" data-alert-id="${alert.id}">📍</button>
+                        </div>
+                    </div>
+                `).join('');
+            })
+            .catch(err => console.error('Failed to load alerts:', err));
+    }
+    
+    function refreshData() {
+        loadKPIs();
+        loadAlerts();
+    }
+    
+    // Load on page ready
+    document.addEventListener('DOMContentLoaded', () => {
+        loadKPIs();
+        loadAlerts();
+        
+        // Refresh every 15 seconds
+        setInterval(refreshData, 15000);
+    });
+</script>
+{% endblock %}
