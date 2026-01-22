@@ -18,8 +18,7 @@ dashboard/.venv/
 # model
 model/
 
-# Local database files (do not push to GitHub)
-database/
+
 
 # Dashboard app (ignored from repo)
 dashboard/
