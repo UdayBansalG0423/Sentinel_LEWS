@@ -1,0 +1,189 @@
+{% extends "base.html" %}
+
+{% block title %}Sensors - Sentinel-LEWS{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h2>Sensor Network</h2>
+    <div class="page-actions">
+        <button class="btn btn-secondary" onclick="refreshSensors()">
+            <span>↻</span> Refresh
+        </button>
+    </div>
+</div>
+
+<!-- Sensor KPI Cards -->
+<div class="kpi-grid">
+    <div class="kpi-card status-ok">
+        <div class="kpi-label">Sensors Online</div>
+        <div class="kpi-value">{{ sensors|selectattr('status', 'equalto', 'OK')|list|length }}</div>
+        <div class="kpi-trend">Operating normally</div>
+    </div>
+    
+    <div class="kpi-card status-warning">
+        <div class="kpi-label">Sensors Drifting</div>
+        <div class="kpi-value">{{ sensors|selectattr('status', 'equalto', 'DRIFT')|list|length }}</div>
+        <div class="kpi-trend">Requires calibration</div>
+    </div>
+    
+    <div class="kpi-card status-error">
+        <div class="kpi-label">Sensors Offline</div>
+        <div class="kpi-value">{{ sensors|selectattr('status', 'equalto', 'OFFLINE')|list|length }}</div>
+        <div class="kpi-trend">No response</div>
+    </div>
+    
+    <div class="kpi-card">
+        <div class="kpi-label">Avg Trust Score</div>
+        <div class="kpi-value">
+            {% set avg_trust = (sensors|map(attribute='trust')|sum / sensors|length)|round(2) if sensors else 0 %}
+            {{ (avg_trust * 100)|round(0) }}%
+        </div>
+        <div class="kpi-trend">Network reliability</div>
+    </div>
+</div>
+
+<!-- Sensors Table -->
+<div class="card">
+    <div class="card-header">
+        <h3>Sensor Status</h3>
+        <div class="card-actions">
+            <input type="text" placeholder="Search sensors..." id="sensor-search" class="search-input">
+        </div>
+    </div>
+    <div class="card-body no-padding">
+        <div class="table-container">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Sensor ID</th>
+                        <th>Status</th>
+                        <th>Type</th>
+                        <th>Trust Score</th>
+                        <th>Last Seen</th>
+                        <th>Location</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for sensor in sensors %}
+                    <tr class="sensor-row status-{{ sensor.status|lower }}">
+                        <td class="cell-sensor-id">
+                            <strong>{{ sensor.sensor_id }}</strong>
+                        </td>
+                        <td>
+                            {% if sensor.status == 'OK' %}
+                            <span class="status-badge status-ok">
+                                <span class="status-dot"></span> ONLINE
+                            </span>
+                            {% elif sensor.status == 'DRIFT' %}
+                            <span class="status-badge status-warning">
+                                <span class="status-dot"></span> DRIFT
+                            </span>
+                            {% else %}
+                            <span class="status-badge status-error">
+                                <span class="status-dot"></span> OFFLINE
+                            </span>
+                            {% endif %}
+                        </td>
+                        <td>{{ sensor.sensor_type or 'N/A' }}</td>
+                        <td>
+                            <div class="trust-score">
+                                <div class="trust-bar">
+                                    <div class="trust-fill" data-width="{{ (sensor.trust * 100)|round(0) }}"></div>
+                                </div>
+                                <span class="trust-value">{{ (sensor.trust * 100)|round(1) }}%</span>
+                            </div>
+                        </td>
+                        <td class="cell-time">
+                            {{ sensor.last_seen|timeago }}<br>
+                            <span class="cell-subtext">{{ sensor.last_seen|format_datetime('%Y-%m-%d %H:%M') }}</span>
+                        </td>
+                        <td class="cell-location">
+                            {% if sensor.latitude and sensor.longitude %}
+                            {{ sensor.latitude|round(4) }}, {{ sensor.longitude|round(4) }}
+                            {% else %}
+                            N/A
+                            {% endif %}
+                        </td>
+                        <td class="cell-actions">
+                            <button class="btn-icon" title="View on Map" onclick="viewSensorOnMap('{{ sensor.sensor_id }}')">📍</button>
+                            <button class="btn-icon" title="Sensor Details" onclick="viewSensorDetails('{{ sensor.sensor_id }}')">👁</button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Sensor Health Chart -->
+<div class="card">
+    <div class="card-header">
+        <h3>Sensor Status Over Time</h3>
+    </div>
+    <div class="card-body">
+        <div class="chart-placeholder">
+            <svg width="100%" height="200" viewBox="0 0 800 200">
+                <!-- Online sensors line -->
+                <polyline points="0,50 100,45 200,40 300,35 400,40 500,38 600,35 700,30 800,28" 
+                          fill="none" stroke="#22c55e" stroke-width="2"/>
+                <!-- Drift sensors line -->
+                <polyline points="0,150 100,148 200,145 300,150 400,155 500,152 600,158 700,160 800,165" 
+                          fill="none" stroke="#f59e0b" stroke-width="2"/>
+                <!-- Offline sensors line -->
+                <polyline points="0,180 100,182 200,185 300,183 400,180 500,185 600,187 700,190 800,188" 
+                          fill="none" stroke="#ef4444" stroke-width="2"/>
+                
+                <text x="10" y="20" fill="#64748b" font-size="12">Count</text>
+                <line x1="0" y1="195" x2="800" y2="195" stroke="#e2e8f0" stroke-width="1"/>
+                <text x="10" y="195" fill="#94a3b8" font-size="10">7 days ago</text>
+                <text x="750" y="195" fill="#94a3b8" font-size="10">Now</text>
+                
+                <!-- Legend -->
+                <g transform="translate(650, 10)">
+                    <line x1="0" y1="0" x2="20" y2="0" stroke="#22c55e" stroke-width="2"/>
+                    <text x="25" y="5" fill="#64748b" font-size="11">Online</text>
+                    
+                    <line x1="0" y1="15" x2="20" y2="15" stroke="#f59e0b" stroke-width="2"/>
+                    <text x="25" y="20" fill="#64748b" font-size="11">Drift</text>
+                    
+                    <line x1="0" y1="30" x2="20" y2="30" stroke="#ef4444" stroke-width="2"/>
+                    <text x="25" y="35" fill="#64748b" font-size="11">Offline</text>
+                </g>
+            </svg>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function refreshSensors() {
+        window.location.reload();
+    }
+    
+    function viewSensorOnMap(sensorId) {
+        alert(`Viewing sensor ${sensorId} on map (feature in development)`);
+    }
+    
+    function viewSensorDetails(sensorId) {
+        alert(`Sensor details for ${sensorId} (feature in development)`);
+    }
+    
+    // Search functionality
+    document.getElementById('sensor-search').addEventListener('input', function(e) {
+        const searchTerm = e.target.value.toLowerCase();
+        const rows = document.querySelectorAll('.sensor-row');
+        
+        rows.forEach(row => {
+            const sensorId = row.querySelector('.cell-sensor-id').textContent.toLowerCase();
+            if (sensorId.includes(searchTerm)) {
+                row.style.display = '';
+            } else {
+                row.style.display = 'none';
+            }
+        });
+    });
+</script>
+{% endblock %}

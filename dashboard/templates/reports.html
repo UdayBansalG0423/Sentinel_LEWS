@@ -1,0 +1,270 @@
+{% extends "base.html" %}
+
+{% block title %}Reports - Sentinel-LEWS{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h2>Reports & Analytics</h2>
+</div>
+
+<!-- Report Cards Grid -->
+<div class="reports-grid">
+    <!-- Daily Risk Summary -->
+    <div class="card report-card">
+        <div class="card-header">
+            <h3>Daily Risk Summary</h3>
+            <span class="report-icon">📊</span>
+        </div>
+        <div class="card-body">
+            <p class="report-description">
+                Comprehensive daily summary of risk assessments, alerts issued, and sensor performance.
+            </p>
+            <div class="report-meta">
+                <div class="meta-item">
+                    <span class="meta-label">Last Generated:</span>
+                    <span class="meta-value">Today, 06:00</span>
+                </div>
+                <div class="meta-item">
+                    <span class="meta-label">Coverage:</span>
+                    <span class="meta-value">Last 24 hours</span>
+                </div>
+            </div>
+            <div class="report-actions">
+                <button class="btn btn-primary" onclick="generateReport('daily')">
+                    Generate Report
+                </button>
+                <button class="btn btn-secondary" onclick="downloadReport('daily', 'pdf')">
+                    Download PDF
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Monsoon Incident Log -->
+    <div class="card report-card">
+        <div class="card-header">
+            <h3>Monsoon Incident Log</h3>
+            <span class="report-icon">🌧️</span>
+        </div>
+        <div class="card-body">
+            <p class="report-description">
+                Complete log of all landslide incidents, evacuations, and emergency responses during monsoon season.
+            </p>
+            <div class="report-meta">
+                <div class="meta-item">
+                    <span class="meta-label">Season:</span>
+                    <span class="meta-value">Monsoon 2026</span>
+                </div>
+                <div class="meta-item">
+                    <span class="meta-label">Incidents Logged:</span>
+                    <span class="meta-value">8 events</span>
+                </div>
+            </div>
+            <div class="report-actions">
+                <button class="btn btn-primary" onclick="generateReport('monsoon')">
+                    View Log
+                </button>
+                <button class="btn btn-secondary" onclick="downloadReport('monsoon', 'json')">
+                    Export JSON
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Sensor Failure Report -->
+    <div class="card report-card">
+        <div class="card-header">
+            <h3>Sensor Failure Report</h3>
+            <span class="report-icon">⚠️</span>
+        </div>
+        <div class="card-body">
+            <p class="report-description">
+                Analysis of sensor failures, drift patterns, and maintenance requirements across the network.
+            </p>
+            <div class="report-meta">
+                <div class="meta-item">
+                    <span class="meta-label">Period:</span>
+                    <span class="meta-value">Last 30 days</span>
+                </div>
+                <div class="meta-item">
+                    <span class="meta-label">Failures:</span>
+                    <span class="meta-value">3 sensors</span>
+                </div>
+            </div>
+            <div class="report-actions">
+                <button class="btn btn-primary" onclick="generateReport('sensor-failure')">
+                    Generate Report
+                </button>
+                <button class="btn btn-secondary" onclick="downloadReport('sensor-failure', 'pdf')">
+                    Download PDF
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Model Performance Report -->
+    <div class="card report-card">
+        <div class="card-header">
+            <h3>Model Performance</h3>
+            <span class="report-icon">🎯</span>
+        </div>
+        <div class="card-body">
+            <p class="report-description">
+                Detailed analysis of prediction accuracy, false positives, and model calibration metrics.
+            </p>
+            <div class="report-meta">
+                <div class="meta-item">
+                    <span class="meta-label">Model:</span>
+                    <span class="meta-value">LGBM v1.2</span>
+                </div>
+                <div class="meta-item">
+                    <span class="meta-label">Predictions:</span>
+                    <span class="meta-value">2,450 total</span>
+                </div>
+            </div>
+            <div class="report-actions">
+                <button class="btn btn-primary" onclick="generateReport('model-performance')">
+                    View Metrics
+                </button>
+                <button class="btn btn-secondary" onclick="downloadReport('model-performance', 'json')">
+                    Export Data
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Backtesting Replay -->
+    <div class="card report-card">
+        <div class="card-header">
+            <h3>Backtesting Replay</h3>
+            <span class="report-icon">⏮️</span>
+        </div>
+        <div class="card-body">
+            <p class="report-description">
+                Replay historical scenarios to validate model predictions against actual outcomes.
+            </p>
+            <div class="report-meta">
+                <div class="meta-item">
+                    <span class="meta-label">Available Scenarios:</span>
+                    <span class="meta-value">12 events</span>
+                </div>
+                <div class="meta-item">
+                    <span class="meta-label">Date Range:</span>
+                    <span class="meta-value">2024-2026</span>
+                </div>
+            </div>
+            <div class="report-actions">
+                <button class="btn btn-primary" onclick="openBacktesting()">
+                    Start Replay
+                </button>
+                <button class="btn btn-secondary" onclick="downloadReport('backtesting', 'json')">
+                    Export Results
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Alert Statistics -->
+    <div class="card report-card">
+        <div class="card-header">
+            <h3>Alert Statistics</h3>
+            <span class="report-icon">📈</span>
+        </div>
+        <div class="card-body">
+            <p class="report-description">
+                Statistical analysis of alerts issued, response times, and effectiveness metrics.
+            </p>
+            <div class="report-meta">
+                <div class="meta-item">
+                    <span class="meta-label">Period:</span>
+                    <span class="meta-value">Last 90 days</span>
+                </div>
+                <div class="meta-item">
+                    <span class="meta-label">Total Alerts:</span>
+                    <span class="meta-value">156 issued</span>
+                </div>
+            </div>
+            <div class="report-actions">
+                <button class="btn btn-primary" onclick="generateReport('alert-stats')">
+                    View Statistics
+                </button>
+                <button class="btn btn-secondary" onclick="downloadReport('alert-stats', 'pdf')">
+                    Download PDF
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Custom Report Generator -->
+<div class="card">
+    <div class="card-header">
+        <h3>Custom Report Generator</h3>
+    </div>
+    <div class="card-body">
+        <div class="custom-report-form">
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Report Type</label>
+                    <select id="custom-report-type">
+                        <option value="risk-analysis">Risk Analysis</option>
+                        <option value="sensor-health">Sensor Health</option>
+                        <option value="alert-summary">Alert Summary</option>
+                        <option value="comprehensive">Comprehensive Report</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label>Date Range</label>
+                    <select id="custom-date-range">
+                        <option value="24h">Last 24 Hours</option>
+                        <option value="7d">Last 7 Days</option>
+                        <option value="30d">Last 30 Days</option>
+                        <option value="90d">Last 90 Days</option>
+                        <option value="custom">Custom Range</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label>Format</label>
+                    <select id="custom-format">
+                        <option value="pdf">PDF</option>
+                        <option value="json">JSON</option>
+                        <option value="csv">CSV</option>
+                    </select>
+                </div>
+            </div>
+            
+            <button class="btn btn-primary" onclick="generateCustomReport()">
+                Generate Custom Report
+            </button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function generateReport(reportType) {
+        alert(`Generating ${reportType} report...`);
+        console.log(`Report type: ${reportType}`);
+    }
+    
+    function downloadReport(reportType, format) {
+        alert(`Downloading ${reportType} report as ${format.toUpperCase()}...`);
+        console.log(`Download: ${reportType}.${format}`);
+    }
+    
+    function openBacktesting() {
+        alert('Opening backtesting interface (feature in development)');
+    }
+    
+    function generateCustomReport() {
+        const type = document.getElementById('custom-report-type').value;
+        const range = document.getElementById('custom-date-range').value;
+        const format = document.getElementById('custom-format').value;
+        
+        alert(`Generating custom report:\nType: ${type}\nRange: ${range}\nFormat: ${format}`);
+    }
+</script>
+{% endblock %}
