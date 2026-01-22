@@ -20,8 +20,8 @@ model/
 
 
 
-# Dashboard app (ignored from repo)
-dashboard/
+# # Dashboard app (ignored from repo)
+# dashboard/
 
 # Distribution / packaging
 build/
