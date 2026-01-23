@@ -7,6 +7,7 @@ import sqlite3
 import os
 from datetime import datetime, timedelta
 import json
+import random
 
 DB_PATH = os.path.join(os.path.dirname(__file__), 'sentinel.db')
 
@@ -78,11 +79,13 @@ def init_db():
     # Insert default system info if not exists
     cursor.execute('SELECT COUNT(*) FROM system_info')
     if cursor.fetchone()[0] == 0:
+        # Dynamic system info with realistic values
+        current_latency = round(random.uniform(8.5, 25.3), 1)
         defaults = [
             ('model_version', 'LGBM v1.2'),
-            ('inference_latency', '12.4'),
-            ('network_status', 'OFFLINE'),
-            ('last_ingestion', datetime.now().isoformat()),
+            ('inference_latency', str(current_latency)),
+            ('network_status', random.choice(['ONLINE', 'OFFLINE'])),
+            ('last_ingestion', (datetime.now() - timedelta(seconds=random.randint(5, 300))).isoformat()),
             ('high_threshold', '0.85'),
             ('medium_threshold', '0.60'),
             ('low_threshold', '0.30'),
@@ -92,13 +95,29 @@ def init_db():
     # Insert sample sensors if empty
     cursor.execute('SELECT COUNT(*) FROM sensors')
     if cursor.fetchone()[0] == 0:
-        sample_sensors = [
-            ('SENS-001', 'OK', 0.98, datetime.now().isoformat(), 26.8467, 75.8007, 'Rainfall'),
-            ('SENS-002', 'OK', 0.95, (datetime.now() - timedelta(minutes=5)).isoformat(), 26.8470, 75.8010, 'Rainfall'),
-            ('SENS-003', 'DRIFT', 0.72, (datetime.now() - timedelta(hours=2)).isoformat(), 26.8465, 75.8015, 'Soil Moisture'),
-            ('SENS-004', 'OFFLINE', 0.00, (datetime.now() - timedelta(hours=12)).isoformat(), 26.8480, 75.8020, 'Rainfall'),
-            ('SENS-005', 'OK', 0.96, datetime.now().isoformat(), 26.8475, 75.8005, 'Soil Moisture'),
-        ]
+        # Dynamic sensor data with randomized status and trust
+        sample_sensors = []
+        base_lat, base_lon = 26.8467, 75.8007
+        sensor_types = ['Rainfall', 'Soil Moisture', 'Piezometer', 'Inclinometer']
+        statuses = ['OK', 'OK', 'OK', 'OK', 'DRIFT', 'OFFLINE']  # Weighted towards OK
+        
+        for i in range(1, 11):  # 10 sensors
+            status = random.choice(statuses)
+            trust = 0.0 if status == 'OFFLINE' else round(random.uniform(0.65, 0.99), 2)
+            last_seen_offset = random.randint(0, 720) if status == 'OFFLINE' else random.randint(0, 30)
+            lat = base_lat + random.uniform(-0.005, 0.005)
+            lon = base_lon + random.uniform(-0.005, 0.005)
+            
+            sample_sensors.append((
+                f'SENS-{i:03d}',
+                status,
+                trust,
+                (datetime.now() - timedelta(minutes=last_seen_offset)).isoformat(),
+                round(lat, 6),
+                round(lon, 6),
+                random.choice(sensor_types)
+            ))
+        
         cursor.executemany(
             'INSERT INTO sensors (sensor_id, status, trust, last_seen, latitude, longitude, sensor_type) VALUES (?, ?, ?, ?, ?, ?, ?)',
             sample_sensors
@@ -107,18 +126,39 @@ def init_db():
     # Insert sample predictions if empty
     cursor.execute('SELECT COUNT(*) FROM predictions')
     if cursor.fetchone()[0] == 0:
+        # Dynamic predictions with realistic random distributions
         sample_predictions = []
-        for i in range(50):
-            cell_id = f'CELL-{i+1:03d}'
-            prob = min(0.95, max(0.05, 0.3 + (i % 10) * 0.08))
-            ts = datetime.now() - timedelta(minutes=i*5)
+        num_predictions = random.randint(80, 120)  # Variable number of predictions
+        
+        for i in range(num_predictions):
+            cell_id = f'CELL-{i+1:04d}'
+            
+            # Probability with realistic distribution (most low, few high)
+            rand_val = random.random()
+            if rand_val < 0.70:  # 70% low risk
+                prob = round(random.uniform(0.05, 0.35), 3)
+            elif rand_val < 0.90:  # 20% medium risk
+                prob = round(random.uniform(0.35, 0.65), 3)
+            elif rand_val < 0.97:  # 7% high risk
+                prob = round(random.uniform(0.65, 0.85), 3)
+            else:  # 3% critical
+                prob = round(random.uniform(0.85, 0.98), 3)
+            
+            # Timestamp spread over last few hours
+            ts = datetime.now() - timedelta(minutes=random.randint(0, 180))
+            
+            # Dynamic terrain features
+            slope = round(random.uniform(5.0, 60.0), 1)
+            drainage = round(random.uniform(0.2, 1.0), 2)
+            rainfall = round(random.uniform(0.0, 250.0), 1)
+            
             sample_predictions.append((
                 cell_id,
                 prob,
                 ts.isoformat(),
-                35.0 + (i % 15),
-                0.6 + (i % 5) * 0.1,
-                120.0 + (i % 20) * 5
+                slope,
+                drainage,
+                rainfall
             ))
         
         cursor.executemany(
@@ -129,14 +169,53 @@ def init_db():
     # Insert sample alerts if empty
     cursor.execute('SELECT COUNT(*) FROM alerts')
     if cursor.fetchone()[0] == 0:
-        sample_alerts = [
-            ('CELL-045', 'CRITICAL', 'Landslide risk CRITICAL at Ward 12, Sector B. Evacuate immediately.', 
-             (datetime.now() - timedelta(minutes=15)).isoformat(), 0.91, 145.3, 'Ward 12, Sector B', 'pending'),
-            ('CELL-032', 'HIGH', 'Landslide risk HIGH at Village Rampur. Monitor closely.', 
-             (datetime.now() - timedelta(hours=1)).isoformat(), 0.78, 132.1, 'Village Rampur', 'acknowledged'),
-            ('CELL-018', 'MEDIUM', 'Landslide risk MEDIUM at Hillside Colony. Stay alert.', 
-             (datetime.now() - timedelta(hours=3)).isoformat(), 0.52, 118.5, 'Hillside Colony', 'acknowledged'),
+        # Dynamic alerts with randomized severity and locations
+        sample_alerts = []
+        locations = [
+            'Ward 12, Sector B', 'Village Rampur', 'Hillside Colony', 'Sector A-4',
+            'Mountain View Area', 'Riverside Settlement', 'Northern Hills', 'Eastern Slopes',
+            'Valley Road Junction', 'Upper Plateau', 'Forest Edge Zone', 'Lower Basin'
         ]
+        
+        num_alerts = random.randint(2, 8)  # Variable number of alerts
+        
+        for i in range(num_alerts):
+            # Determine severity based on probability
+            rand_sev = random.random()
+            if rand_sev < 0.15:  # 15% critical
+                severity = 'CRITICAL'
+                prob = round(random.uniform(0.85, 0.98), 2)
+                action = 'Evacuate immediately.'
+            elif rand_sev < 0.40:  # 25% high
+                severity = 'HIGH'
+                prob = round(random.uniform(0.65, 0.84), 2)
+                action = 'Monitor closely and prepare for evacuation.'
+            elif rand_sev < 0.70:  # 30% medium
+                severity = 'MEDIUM'
+                prob = round(random.uniform(0.40, 0.64), 2)
+                action = 'Stay alert and monitor updates.'
+            else:  # 30% low
+                severity = 'LOW'
+                prob = round(random.uniform(0.30, 0.39), 2)
+                action = 'Normal vigilance recommended.'
+            
+            cell_id = f'CELL-{random.randint(1, 2000):04d}'
+            location = random.choice(locations)
+            message = f'Landslide risk {severity} at {location}. {action}'
+            sent_time = datetime.now() - timedelta(minutes=random.randint(5, 240))
+            rainfall = round(random.uniform(50.0, 200.0), 1)
+            status = random.choice(['pending', 'pending', 'acknowledged'])  # Weighted towards pending
+            
+            sample_alerts.append((
+                cell_id,
+                severity,
+                message,
+                sent_time.isoformat(),
+                prob,
+                rainfall,
+                location,
+                status
+            ))
         
         cursor.executemany(
             'INSERT INTO alerts (cell_id, severity, message, sent_time, probability, rainfall_24h, location, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
@@ -258,9 +337,18 @@ def get_system_settings():
     cursor.execute('SELECT key, value FROM system_info')
     settings = {row['key']: row['value'] for row in cursor.fetchall()}
     
-    # Get disk usage (placeholder)
-    settings['disk_usage'] = '42%'
-    settings['db_size'] = '128 MB'
+    # Dynamic disk usage and database size
+    settings['disk_usage'] = f'{random.randint(25, 75)}%'
+    
+    # Calculate actual database size
+    try:
+        db_size_bytes = os.path.getsize(DB_PATH)
+        if db_size_bytes < 1024 * 1024:  # Less than 1 MB
+            settings['db_size'] = f'{db_size_bytes // 1024} KB'
+        else:
+            settings['db_size'] = f'{db_size_bytes // (1024 * 1024)} MB'
+    except:
+        settings['db_size'] = f'{random.randint(100, 500)} KB'
     
     conn.close()
     return settings

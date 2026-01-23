@@ -4,8 +4,8 @@ import pandas as pd
 from pyproj import Transformer
 
 # ---- FILE PATHS ----
-SLOPE_RASTER = "dataset_builder/raster/slope_shimla.tif"
-OUTPUT_CSV = "dataset_builder/output/shimla_static.csv"
+SLOPE_RASTER = "raster/slope_shimla.tif"
+OUTPUT_CSV = "output/shimla_static.csv"
 
 # ---- OPEN RASTER ----
 with rasterio.open(SLOPE_RASTER) as src:

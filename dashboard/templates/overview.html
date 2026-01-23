@@ -6,9 +6,81 @@
 <div class="page-header">
     <h2>System Overview</h2>
     <div class="page-actions">
+        <span class="status-badge status-online" id="system-mode">OFFLINE MODE</span>
+        <button class="btn btn-primary" onclick="showInferenceModal()" title="Run inference with custom data">
+            <span>🔮</span> Run Inference
+        </button>
         <button class="btn btn-secondary" onclick="refreshData()">
             <span>↻</span> Refresh
         </button>
+    </div>
+</div>
+
+<!-- Inference Modal -->
+<div id="inference-modal" class="modal" style="display: none;">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>Run Manual Inference</h3>
+            <button class="modal-close" onclick="closeInferenceModal()">&times;</button>
+        </div>
+        <div class="modal-body">
+            <p>Trigger a prediction cycle with custom or current rainfall data.</p>
+            
+            <div class="form-group">
+                <label for="rainfall-input">Rainfall (mm) - Optional</label>
+                <input type="number" id="rainfall-input" class="form-control" 
+                       placeholder="Leave empty to use current data" min="0" max="500" step="0.1">
+                <small>Enter a rainfall value in mm, or leave empty to use historical data</small>
+            </div>
+            
+            <div class="form-actions">
+                <button class="btn btn-primary" onclick="runInference()">
+                    <span>▶</span> Run Inference
+                </button>
+                <button class="btn btn-secondary" onclick="closeInferenceModal()">Cancel</button>
+            </div>
+            
+            <div id="inference-result" class="alert" style="display: none; margin-top: 15px;"></div>
+        </div>
+    </div>
+</div>
+
+<!-- System Status Banner (Mission-Critical Info) -->
+<div class="system-status-banner" id="system-status">
+    <div class="status-item">
+        <span class="status-icon">🕒</span>
+        <div class="status-info">
+            <div class="status-label">Last Data Update</div>
+            <div class="status-value" id="last-update">--</div>
+        </div>
+    </div>
+    <div class="status-item">
+        <span class="status-icon">⚡</span>
+        <div class="status-info">
+            <div class="status-label">Inference Latency</div>
+            <div class="status-value" id="inference-latency">-- ms</div>
+        </div>
+    </div>
+    <div class="status-item">
+        <span class="status-icon">📊</span>
+        <div class="status-info">
+            <div class="status-label">Model Status</div>
+            <div class="status-value" id="model-status">LGBM v1.2 (697KB)</div>
+        </div>
+    </div>
+    <div class="status-item">
+        <span class="status-icon">🌐</span>
+        <div class="status-info">
+            <div class="status-label">Network Status</div>
+            <div class="status-value status-offline" id="network-status">OFFLINE</div>
+        </div>
+    </div>
+    <div class="status-item">
+        <span class="status-icon">🗺️</span>
+        <div class="status-info">
+            <div class="status-label">Grid Coverage</div>
+            <div class="status-value" id="grid-coverage">2000 cells (100m)</div>
+        </div>
     </div>
 </div>
 
@@ -286,6 +358,19 @@
                 document.getElementById('kpi-active-alerts').textContent = data.active_alerts;
                 document.getElementById('kpi-sensors-online').textContent = data.sensors_online_pct + '%';
                 document.getElementById('kpi-rainfall').textContent = data.avg_rainfall_24h + ' mm';
+                
+                // Update last refresh timestamp to show dashboard is live
+                if (data.last_refresh) {
+                    document.getElementById('last-update').textContent = data.last_refresh;
+                }
+                if (data.inference_latency) {
+                    document.getElementById('inference-latency').textContent = data.inference_latency + ' ms';
+                }
+                if (data.network_status) {
+                    const networkElem = document.getElementById('network-status');
+                    networkElem.textContent = data.network_status;
+                    networkElem.className = data.network_status === 'ONLINE' ? 'status-value status-online' : 'status-value status-offline';
+                }
             })
             .catch(err => console.error('Failed to load KPIs:', err));
     }
@@ -330,6 +415,69 @@
         loadAlerts();
     }
     
+    // Modal functions
+    function showInferenceModal() {
+        document.getElementById('inference-modal').style.display = 'flex';
+        document.getElementById('inference-result').style.display = 'none';
+        document.getElementById('rainfall-input').value = '';
+    }
+    
+    function closeInferenceModal() {
+        document.getElementById('inference-modal').style.display = 'none';
+    }
+    
+    function runInference() {
+        const rainfallInput = document.getElementById('rainfall-input');
+        const resultDiv = document.getElementById('inference-result');
+        const rainfall = rainfallInput.value ? parseFloat(rainfallInput.value) : null;
+        
+        // Show loading state
+        resultDiv.style.display = 'block';
+        resultDiv.className = 'alert alert-info';
+        resultDiv.innerHTML = '⏳ Running inference... Please wait.';
+        
+        // Make API call
+        fetch('/api/trigger_cycle', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                custom_rainfall: rainfall
+            })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                resultDiv.className = 'alert alert-success';
+                resultDiv.innerHTML = `
+                    <strong>✓ Inference Complete!</strong><br>
+                    <ul style="margin: 10px 0 0 20px; text-align: left;">
+                        <li>Total Cells: ${data.statistics.total_cells}</li>
+                        <li>Alerts Triggered: ${data.statistics.alerts_triggered}</li>
+                        <li>Avg Probability: ${data.statistics.avg_probability.toFixed(3)}</li>
+                        <li>Max Probability: ${data.statistics.max_probability.toFixed(3)}</li>
+                        <li>Latest Rainfall: ${data.statistics.latest_rainfall.toFixed(1)} mm</li>
+                    </ul>
+                    <small>Dashboard will auto-refresh in a few seconds...</small>
+                `;
+                
+                // Auto-refresh dashboard after 2 seconds
+                setTimeout(() => {
+                    refreshData();
+                    closeInferenceModal();
+                }, 2000);
+            } else {
+                resultDiv.className = 'alert alert-error';
+                resultDiv.innerHTML = `<strong>✗ Error:</strong> ${data.error}`;
+            }
+        })
+        .catch(err => {
+            resultDiv.className = 'alert alert-error';
+            resultDiv.innerHTML = `<strong>✗ Error:</strong> ${err.message}`;
+        });
+    }
+    
     // Load on page ready
     document.addEventListener('DOMContentLoaded', () => {
         loadKPIs();
@@ -337,6 +485,13 @@
         
         // Refresh every 15 seconds
         setInterval(refreshData, 15000);
+        
+        // Close modal on escape key
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                closeInferenceModal();
+            }
+        });
     });
 </script>
 {% endblock %}

@@ -1,0 +1,20 @@
+======================================================================
+SENTINEL-LEWS - Landslide Early Warning System
+======================================================================
+Initializing system components...
+Loading model from: C:\Users\patel\BlockChainOSProject\Sentinel_LEWS\models\lgb_model.txt
+Traceback (most recent call last):
+  File "C:\Users\patel\BlockChainOSProject\Sentinel_LEWS\main.py", line 233, in <module>
+    main()
+  File "C:\Users\patel\BlockChainOSProject\Sentinel_LEWS\main.py", line 220, in main
+    system = SentinelLEWS(
+             ^^^^^^^^^^^^^
+  File "C:\Users\patel\BlockChainOSProject\Sentinel_LEWS\main.py", line 35, in __init__
+    self.prediction_engine = LandslidePredictionEngine()
+                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\patel\BlockChainOSProject\Sentinel_LEWS\runtime\inference.py", line 32, in __init__
+    print("\u2713 Model loaded successfully")
+  File "C:\Users\patel\AppData\Local\Programs\Python\Python312\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\u2713' in position 0: character maps to <undefined>

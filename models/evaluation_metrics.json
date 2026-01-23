@@ -1,0 +1,17 @@
+{
+  "auc_score": 1.0,
+  "accuracy": 1.0,
+  "f1_score": 1.0,
+  "training_time_sec": 1.48,
+  "inference_time_sec": 0.08,
+  "avg_inference_ms_per_sample": 0.0001,
+  "model_size_kb": 89.97,
+  "test_samples": 627600,
+  "feature_importance": {
+    "slope": 30.0,
+    "rain_1d": 292.0,
+    "rain_3d": 125.0,
+    "rain_7d": 11.0,
+    "rain_15d": 240.0
+  }
+}
