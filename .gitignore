@@ -41,3 +41,14 @@ Thumbs.db
 .vscode/
 .idea/
 
+# Large CSV files (too big for GitHub)
+dataset_builder/shimla_training.csv
+dataset_builder/output/shimla_static.csv
+dataset_builder/*.csv
+dataset_builder/output/*.csv
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+dashboard/sentinel.db
