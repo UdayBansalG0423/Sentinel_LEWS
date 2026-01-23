@@ -46,6 +46,8 @@ dataset_builder/shimla_training.csv
 dataset_builder/output/shimla_static.csv
 dataset_builder/*.csv
 dataset_builder/output/*.csv
+models/shimla_training.csv
+models/*.csv
 
 # Database files
 *.db
